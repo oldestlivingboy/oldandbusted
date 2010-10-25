@@ -21,21 +21,19 @@
 /* The domain names Facebook phones home with, lowercased. */
 const DOMAINS = ['facebook.com', 'facebook.net', 'fbcdn.net'];
 
-/* The number of domain names. */
-const DOMAIN_COUNT = DOMAINS.length;
-
-/* Determines whether a domain is part of a URL, regex free. */
-function isMatching(url, domain) {
-  return url.toLowerCase().indexOf(domain, 7) >= 7;
-      // A valid URL has at least seven characters ("http://"), then the domain.
+/*
+  Determines whether any of a bucket of domains is part of a URL, regex free.
+*/
+function isMatching(url, domains) {
+  const DOMAIN_COUNT = domains.length;
+  for (var i = 0; i < DOMAIN_COUNT; i++)
+      if (url.toLowerCase().indexOf(domains[i], 7) >= 7) return true;
+          // A valid URL has seven-plus characters ("http://"), then the domain.
 }
 
 /* Traps and selectively cancels a request. */
-if (!isMatching(location.href, DOMAINS[0])) {
+if (!isMatching(location.href, DOMAINS)) {
   document.addEventListener("beforeload", function(event) {
-    var matching;
-    for (var i = 0; i < DOMAIN_COUNT; i++)
-        if (matching = isMatching(event.url, DOMAINS[i])) break;
-    if (matching) event.preventDefault();
+    if (isMatching(event.url, DOMAINS)) event.preventDefault();
   }, true);
 }
