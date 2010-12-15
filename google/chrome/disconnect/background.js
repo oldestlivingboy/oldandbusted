@@ -128,13 +128,13 @@ const SERVICES = [
     'bookmarks',
     'calendar',
     'ig',
+    'latitude',
     'reader',
-    'support',
     'voice',
     'webmasters'
     // Chrome won't persist more than 11 paths (probably because of cookie
     // limits) -- "alerts", "cse", "dfp", "friendconnect", "local", "merchants",
-    // and "notebook" are omitted for headroom.
+    // "notebook", and "support" are omitted for headroom.
   ], 'https://www.google.com/'],
   ['Twitter', ['twitter.com']],
   ['Yahoo', ['yahoo.com'], [
