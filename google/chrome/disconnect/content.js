@@ -24,10 +24,10 @@ function index(url, services) {
 
   services:
   for (var i = 0; i < SERVICE_COUNT; i++) {
-    var service = services[i];
-    var domainCount = service.length;
+    var domains = services[i][0];
+    var domainCount = domains.length;
     for (var j = 0; j < domainCount; j++)
-        if (url.toLowerCase().indexOf(service[j], 7) >= 7) break services;
+        if (url.toLowerCase().indexOf(domains[j], 7) >= 7) break services;
             // An OK URL has seven-plus characters ("http://"), then the domain.
   }
 
@@ -43,6 +43,12 @@ EXTENSION.sendRequest({initialized: true}, function(response) {
   var serviceIndex;
   if ((serviceIndex = index(location.href, BLACKLIST)) >= 0)
       BLACKLIST.splice(serviceIndex, 1);
+  const SERVICE_COUNT = BLACKLIST.length;
+
+  for (var i = 0; i < SERVICE_COUNT; i++) {
+    var service = BLACKLIST[i];
+    if (service[1]) service[0].splice(0, 1);
+  }
 
   document.addEventListener('beforeload', function(event) {
     if ((serviceIndex = index(event.url, BLACKLIST)) >= 0) {

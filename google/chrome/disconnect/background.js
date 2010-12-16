@@ -216,7 +216,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       var service = SERVICES[i];
       BLACKLIST[i] =
           deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME]) ?
-              service[1] : [];
+              [service[1], !!service[2]] : [[], false];
     }
 
     sendResponse({blacklist: BLACKLIST});
