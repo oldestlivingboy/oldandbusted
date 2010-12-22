@@ -113,6 +113,7 @@ const SERVICES = [
     'chrome',
     'code',
     'docs',
+    'feedburner',
     'groups',
     'health',
     'knol',
@@ -136,7 +137,7 @@ const SERVICES = [
     // limits) -- "alerts", "cse", "dfp", "friendconnect", "local", "merchants",
     // "notebook", and "support" are omitted for headroom.
   ], 'https://www.google.com/'],
-  ['Twitter', ['twitter.com']],
+  ['Twitter', ['twitter.com', 'twimg.com']],
   ['Yahoo', ['yahoo.com'], [
     'address',
     'answers',
