@@ -31,9 +31,64 @@ function deserialize(object) {
   return typeof object == 'string' ? JSON.parse(object) : object;
 }
 
-/* Rewrites a generic search cookie with specific domains and paths. */
+/* Erases a batch of cookies. */
+function deleteCookies(url, storeId) {
+  COOKIES.getAll({url: url, storeId: storeId}, function(cookies) {
+    const COOKIE_COUNT = cookies.length;
+    for (var i = 0; i < COOKIE_COUNT; i++)
+        COOKIES.remove({url: url, name: cookies[i].name, storeId: storeId});
+  });
+}
+
+/* Rewrites a batch of specific cookies with a generic domain and path. */
+function reduceCookies(url, service) {
+  COOKIES.getAllCookieStores(function(cookieStores) {
+    const STORE_COUNT = cookieStores.length;
+    const SUBDOMAINS = service[2];
+    const SUBDOMAIN_COUNT = SUBDOMAINS.length;
+    const DOMAIN = '.' + service[1][0];
+    const PATHS = service[3];
+    const PATH_COUNT = PATHS.length;
+
+    for (var i = 0; i < STORE_COUNT; i++) {
+      var storeId = cookieStores[i].id;
+
+      for (var j = 0; j < SUBDOMAIN_COUNT; j++) {
+        var subdomain = SUBDOMAINS[j];
+        var mappedUrl =
+            url.replace('www', subdomain).replace('search', subdomain);
+
+        if (!j) {
+          COOKIES.getAll({url: mappedUrl, storeId: storeId}, function(cookies) {
+            const COOKIE_COUNT = cookies.length;
+
+            for (var i = 0; i < COOKIE_COUNT; i++) {
+              var details = cookies[i];
+              details.url = url;
+              details.domain = DOMAIN;
+              delete details.hostOnly;
+              delete details.session;
+
+              setTimeout(function(details) {
+                COOKIES.set(details);
+              }.bind(null, details), 1000);
+            }
+          });
+        }
+
+        deleteCookies(mappedUrl, storeId);
+      }
+
+      for (j = 0; j < PATH_COUNT; j++) deleteCookies(url + PATHS[j], storeId);
+    }
+  });
+}
+
+/* Rewrites a generic cookie with specific domains and paths. */
 function mapCookie(cookie, storeId, url, domain, subdomains, paths) {
-  const SUBDOMAIN_COUNT = subdomains.length;
+  const MINIMIZE = Math.min;
+  const SUBDOMAIN_COUNT = MINIMIZE(subdomains.length, 20);
+      // Chrome won't persist more than 22 domains because of cookie limits.
   delete cookie.hostOnly;
   delete cookie.session;
   const DOMAIN = cookie.domain;
@@ -45,7 +100,8 @@ function mapCookie(cookie, storeId, url, domain, subdomains, paths) {
     COOKIES.set(cookie);
   }
 
-  const PATH_COUNT = paths.length;
+  const PATH_COUNT = MINIMIZE(paths.length, 10);
+      // Chrome won't persist more than 11 paths.
   cookie.domain = DOMAIN;
 
   for (i = 0; i < PATH_COUNT; i++) {
@@ -58,8 +114,10 @@ function mapCookie(cookie, storeId, url, domain, subdomains, paths) {
   COOKIES.remove({url: url, name: cookie.name, storeId: storeId});
 }
 
-/* Rewrites a batch of search cookies. */
+/* Rewrites a batch of generic cookies with specific domains and paths. */
 function mapCookies(url, service) {
+  reduceCookies(url, service);
+
   COOKIES.getAllCookieStores(function(cookieStores) {
     const STORE_COUNT = cookieStores.length;
     const DOMAIN = '.' + service[1][0];
@@ -132,10 +190,15 @@ const SERVICES = [
     'latitude',
     'reader',
     'voice',
-    'webmasters'
-    // Chrome won't persist more than 11 paths (probably because of cookie
-    // limits) -- "alerts", "cse", "dfp", "friendconnect", "local", "merchants",
-    // "notebook", and "support" are omitted for headroom.
+    'webmasters',
+    'alerts',
+    'cse',
+    'dfp',
+    'friendconnect',
+    'local',
+    'merchants',
+    'notebook',
+    'support'
   ], 'https://www.google.com/'],
   ['Twitter', ['twitter.com', 'twimg.com']],
   ['Yahoo', ['yahoo.com'], [
@@ -158,11 +221,17 @@ const SERVICES = [
     'sports',
     'upcoming',
     'webmessenger',
-    'www'
-    // Chrome 8 won't persist more than 22 domains -- "alerts", "autos",
-    // "avatars", "help", "login" (which is required to enable OpenID access but
-    // conflicts with "edit"), "messages", "realestate", "smallbusiness",
-    // "travel", "widgets", and all international subdomains are omitted.
+    'www',
+    'alerts',
+    'autos',
+    'avatars',
+    'help',
+    'login', // "login" is required for OpenID access but conflicts with "edit".
+    'messages',
+    'realestate',
+    'smallbusiness',
+    'travel',
+    'widgets'
   ], [], 'https://search.yahoo.com/']
 ];
 

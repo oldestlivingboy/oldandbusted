@@ -18,15 +18,6 @@
   Brian Kennish <byoogle@gmail.com>
 */
 
-/* Erases a batch of cookies. */
-function reduceCookies(url, storeId) {
-  COOKIES.getAll({url: url, storeId: storeId}, function(cookies) {
-    const COOKIE_COUNT = cookies.length;
-    for (var i = 0; i < COOKIE_COUNT; i++)
-        COOKIES.remove({url: url, name: cookies[i].name, storeId: storeId});
-  });
-}
-
 /* Outputs third-party details as per the blocking state. */
 function renderService(
   name, lowercaseName, blocked, blockedCount, control, badge, text
@@ -62,9 +53,6 @@ const SERVICE_COUNT = BACKGROUND.SERVICE_COUNT;
 
 /* The suffix of the blocking key. */
 const BLOCKED_NAME = BACKGROUND.BLOCKED_NAME;
-
-/* The "cookies" API. */
-const COOKIES = BACKGROUND.COOKIES;
 
 /* Paints the UI. */
 onload = function() {
@@ -118,55 +106,8 @@ onload = function() {
             localStorage[blockedName] = !DESERIALIZE(localStorage[blockedName]);
 
         if (URL) {
-          if (BLOCKED) {
-            BACKGROUND.mapCookies(URL, service);
-          } else {
-            COOKIES.getAllCookieStores(function(cookieStores) {
-              const STORE_COUNT = cookieStores.length;
-              const SUBDOMAINS = service[2];
-              const SUBDOMAIN_COUNT = SUBDOMAINS.length;
-              const DOMAIN = '.' + service[1][0];
-              const PATHS = service[3];
-              const PATH_COUNT = PATHS.length;
-
-              for (var i = 0; i < STORE_COUNT; i++) {
-                var storeId = cookieStores[i].id;
-
-                for (var j = 0; j < SUBDOMAIN_COUNT; j++) {
-                  var subdomain = SUBDOMAINS[j];
-                  var url =
-                      URL.
-                        replace('www', subdomain).
-                        replace('search', subdomain);
-
-                  if (!j) {
-                    COOKIES.getAll(
-                      {url: url, storeId: storeId}, function(cookies) {
-                        const COOKIE_COUNT = cookies.length;
-
-                        for (var i = 0; i < COOKIE_COUNT; i++) {
-                          var details = cookies[i];
-                          details.url = URL;
-                          details.domain = DOMAIN;
-                          delete details.hostOnly;
-                          delete details.session;
-
-                          BACKGROUND.setTimeout(function(details) {
-                            COOKIES.set(details);
-                          }.bind(null, details), 1000);
-                        }
-                      }
-                    );
-                  }
-
-                  reduceCookies(url, storeId);
-                }
-
-                for (j = 0; j < PATH_COUNT; j++)
-                    reduceCookies(URL + PATHS[j], storeId);
-              }
-            });
-          }
+          if (BLOCKED) BACKGROUND.mapCookies(URL, service);
+          else BACKGROUND.reduceCookies(URL, service);
         }
 
         renderService(
