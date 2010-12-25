@@ -187,15 +187,16 @@ const SERVICES = [
     'wave'
   ], [
     'accounts',
-    'adsense',
     'analytics',
     'bookmarks',
     'calendar',
+    'finance',
     'ig',
     'latitude',
     'reader',
     'voice',
     'webmasters',
+    'adsense',
     'alerts',
     'cse',
     'dfp',
@@ -213,6 +214,7 @@ const SERVICES = [
     'buzz',
     'calendar',
     'edit',
+    'finance',
     'games',
     'groups',
     'hotjobs',
@@ -220,7 +222,6 @@ const SERVICES = [
     'mail',
     'my',
     'notepad',
-    'pipes',
     'pulse',
     'shine',
     'sports',
@@ -233,6 +234,7 @@ const SERVICES = [
     'help',
     'login', // "login" is required for OpenID access but conflicts with "edit".
     'messages',
+    'pipes',
     'realestate',
     'smallbusiness',
     'travel',
@@ -258,7 +260,7 @@ const COOKIES = chrome.cookies;
 /* The "browserAction" API. */
 const BROWSER_ACTION = chrome.browserAction;
 
-/* The timestamp method. */
+/* The timestamping method. */
 const TIMESTAMP = Date.now;
 
 /* The start time of this script. */
