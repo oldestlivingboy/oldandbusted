@@ -31,12 +31,66 @@ function deserialize(object) {
   return typeof object == 'string' ? JSON.parse(object) : object;
 }
 
+/* Rewrites a generic cookie with specific domains and paths. */
+function mapCookie(cookie, storeId, url, domain, subdomains, paths) {
+  const MINIMIZE = Math.min;
+  const SUBDOMAIN_COUNT = MINIMIZE(subdomains.length, 20);
+      // Chrome won't persist more than 22 domains because of cookie limits.
+  delete cookie.hostOnly;
+  delete cookie.session;
+  const DOMAIN = cookie.domain;
+
+  for (var i = 0; i < SUBDOMAIN_COUNT; i++) {
+    var subdomain = subdomains[i];
+    cookie.url = url.replace('www', subdomain).replace('search', subdomain);
+    cookie.domain = subdomain + domain;
+    COOKIES.set(cookie);
+  }
+
+  const PATH_COUNT = MINIMIZE(paths.length, 10);
+      // Chrome won't persist more than 11 paths.
+  cookie.domain = DOMAIN;
+
+  for (i = 0; i < PATH_COUNT; i++) {
+    var path = paths[i];
+    cookie.url = url + path;
+    cookie.path = '/' + path;
+    COOKIES.set(cookie);
+  }
+
+  COOKIES.remove({url: url, name: cookie.name, storeId: storeId});
+}
+
+/* Rewrites a batch of generic cookies with specific domains and paths. */
+function mapCookies(url, service) {
+  COOKIES.getAllCookieStores(function(cookieStores) {
+    const STORE_COUNT = cookieStores.length;
+    const DOMAIN = '.' + service[1][0];
+    const SUBDOMAINS = service[2];
+    const PATHS = service[3];
+
+    for (var i = 0; i < STORE_COUNT; i++) {
+      var storeId = cookieStores[i].id;
+
+      COOKIES.getAll({url: url, storeId: storeId}, function(cookies) {
+        const COOKIE_COUNT = cookies.length;
+        for (var j = 0; j < COOKIE_COUNT; j++)
+            mapCookie(cookies[j], storeId, url, DOMAIN, SUBDOMAINS, PATHS);
+      });
+    }
+  });
+}
+
 /* Erases a batch of cookies. */
-function deleteCookies(url, storeId) {
+function deleteCookies(url, domain, path, storeId) {
   COOKIES.getAll({url: url, storeId: storeId}, function(cookies) {
     const COOKIE_COUNT = cookies.length;
-    for (var i = 0; i < COOKIE_COUNT; i++)
-        COOKIES.remove({url: url, name: cookies[i].name, storeId: storeId});
+
+    for (var i = 0; i < COOKIE_COUNT; i++) {
+      var cookie = cookies[i];
+      if (cookie.domain == domain && cookie.path == path)
+          COOKIES.remove({url: url, name: cookie.name, storeId: storeId});
+    }
   });
 }
 
@@ -76,62 +130,13 @@ function reduceCookies(url, service) {
           });
         }
 
-        deleteCookies(mappedUrl, storeId);
+        deleteCookies(mappedUrl, '.' + subdomain + DOMAIN, '/', storeId);
       }
 
-      for (j = 0; j < PATH_COUNT; j++) deleteCookies(url + PATHS[j], storeId);
-    }
-  });
-}
-
-/* Rewrites a generic cookie with specific domains and paths. */
-function mapCookie(cookie, storeId, url, domain, subdomains, paths) {
-  const MINIMIZE = Math.min;
-  const SUBDOMAIN_COUNT = MINIMIZE(subdomains.length, 20);
-      // Chrome won't persist more than 22 domains because of cookie limits.
-  delete cookie.hostOnly;
-  delete cookie.session;
-  const DOMAIN = cookie.domain;
-
-  for (var i = 0; i < SUBDOMAIN_COUNT; i++) {
-    var subdomain = subdomains[i];
-    cookie.url = url.replace('www', subdomain).replace('search', subdomain);
-    cookie.domain = subdomain + domain;
-    COOKIES.set(cookie);
-  }
-
-  const PATH_COUNT = MINIMIZE(paths.length, 10);
-      // Chrome won't persist more than 11 paths.
-  cookie.domain = DOMAIN;
-
-  for (i = 0; i < PATH_COUNT; i++) {
-    var path = paths[i];
-    cookie.url = url + path;
-    cookie.path = '/' + path;
-    COOKIES.set(cookie);
-  }
-
-  COOKIES.remove({url: url, name: cookie.name, storeId: storeId});
-}
-
-/* Rewrites a batch of generic cookies with specific domains and paths. */
-function mapCookies(url, service) {
-  reduceCookies(url, service);
-
-  COOKIES.getAllCookieStores(function(cookieStores) {
-    const STORE_COUNT = cookieStores.length;
-    const DOMAIN = '.' + service[1][0];
-    const SUBDOMAINS = service[2];
-    const PATHS = service[3];
-
-    for (var i = 0; i < STORE_COUNT; i++) {
-      var storeId = cookieStores[i].id;
-
-      COOKIES.getAll({url: url, storeId: storeId}, function(cookies) {
-        const COOKIE_COUNT = cookies.length;
-        for (var j = 0; j < COOKIE_COUNT; j++)
-            mapCookie(cookies[j], storeId, url, DOMAIN, SUBDOMAINS, PATHS);
-      });
+      for (j = 0; j < PATH_COUNT; j++) {
+        var path = PATHS[j];
+        deleteCookies(url + path, DOMAIN, '/' + path, storeId);
+      }
     }
   });
 }
@@ -253,6 +258,12 @@ const COOKIES = chrome.cookies;
 /* The "browserAction" API. */
 const BROWSER_ACTION = chrome.browserAction;
 
+/* The timestamp method. */
+const TIMESTAMP = Date.now;
+
+/* The start time of this script. */
+const START_TIME = TIMESTAMP();
+
 /* A throwaway index. */
 var i;
 
@@ -266,8 +277,13 @@ if (!deserialize(localStorage.initialized)) {
 for (i = 0; i < SERVICE_COUNT; i++) {
   var service = SERVICES[i];
   var url = service[4];
-  if (url && deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME]))
-      mapCookies(url, service);
+
+  if (
+    url && deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME])
+  ) {
+    reduceCookies(url, service);
+    mapCookies(url, service);
+  }
 }
 
 BROWSER_ACTION.setBadgeBackgroundColor({color: [60, 92, 153, 255]});
@@ -318,12 +334,14 @@ COOKIES.onChanged.addListener(function(changeInfo) {
       ) {
         mapCookie(COOKIE, COOKIE.storeId, url, domain, service[2], service[3]);
 
-        setTimeout(function(serviceIndex) {
-          TABS.getSelected(null, function(tab) {
-            incrementCounter(tab.id, serviceIndex);
-          }); // The cookie might not be getting set from the selected tab.
-        }.bind(null, i), 2000);
-            // This function call would otherwise race that of the tab listener.
+        if (TIMESTAMP() >= START_TIME + 2000) {
+          setTimeout(function(serviceIndex) {
+            TABS.getSelected(null, function(tab) {
+              incrementCounter(tab.id, serviceIndex);
+            }); // The cookie might not be getting set from the selected tab.
+          }.bind(null, i), 2000);
+              // This call would otherwise race that of the tab listener.
+        }
       }
     }
   }
