@@ -272,6 +272,7 @@ var i;
 if (!deserialize(localStorage.initialized)) {
   for (i = 0; i < SERVICE_COUNT; i++)
       localStorage[SERVICES[i][0].toLowerCase() + BLOCKED_NAME] = true;
+  localStorage.searchDepersonalized = false;
   localStorage.blockingIndicated = true;
   localStorage.initialized = true;
 }
@@ -284,7 +285,8 @@ for (i = 0; i < SERVICE_COUNT; i++) {
     url && deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME])
   ) {
     reduceCookies(url, service);
-    mapCookies(url, service);
+    if (deserialize(localStorage.searchDepersonalized))
+        mapCookies(url, service);
   }
 }
 
@@ -319,7 +321,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
   requests.
 */
 COOKIES.onChanged.addListener(function(changeInfo) {
-  if (!changeInfo.removed) {
+  if (deserialize(localStorage.searchDepersonalized) && !changeInfo.removed) {
     const COOKIE = changeInfo.cookie;
     const DOMAIN = COOKIE.domain;
     const PATH = COOKIE.path;

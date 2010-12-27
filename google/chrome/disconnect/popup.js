@@ -71,7 +71,7 @@ onload = function() {
       var blockedCount = SERVICE_BLOCKED_COUNTS[i];
       var control =
           SURFACE.appendChild(
-            document.getElementsByTagName('tr')[0].cloneNode(true)
+            SURFACE.getElementsByTagName('tr')[0].cloneNode(true)
           );
       var badge = control.getElementsByTagName('img')[0];
       var text = control.getElementsByTagName('td')[1];
@@ -105,7 +105,7 @@ onload = function() {
         const BLOCKED =
             localStorage[blockedName] = !DESERIALIZE(localStorage[blockedName]);
 
-        if (URL) {
+        if (DESERIALIZE(localStorage.searchDepersonalized) && URL) {
           if (BLOCKED) BACKGROUND.mapCookies(URL, service);
           else BACKGROUND.reduceCookies(URL, service);
         }
@@ -125,5 +125,25 @@ onload = function() {
         text
       );
     }
+
+    const CHECKBOX = document.getElementsByTagName('input')[0];
+    CHECKBOX.checked = DESERIALIZE(localStorage.searchDepersonalized);
+
+    CHECKBOX.onchange = function() {
+      const DEPERSONALIZED = localStorage.searchDepersonalized = this.checked;
+
+      for (var i = 0; i < SERVICE_COUNT; i++) {
+        var service = SERVICES[i];
+        var url = service[4];
+
+        if (
+          url &&
+              DESERIALIZE(localStorage[service[0].toLowerCase() + BLOCKED_NAME])
+        ) {
+          if (DEPERSONALIZED) BACKGROUND.mapCookies(url, service);
+          else BACKGROUND.reduceCookies(url, service);
+        }
+      }
+    };
   });
 };

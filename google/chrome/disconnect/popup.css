@@ -17,14 +17,17 @@
 
   Brian Kennish <byoogle@gmail.com>
 */
+body, td { text-align: center }
+
 body {
   margin: 0;
-  width: 128px
+  width: 140px;
+  font: x-small Arial, sans-serif
 }
 
 table {
   border-collapse: collapse;
-  font: small Arial, sans-serif
+  font-size: small
 }
 
 tr {
@@ -35,14 +38,18 @@ tr {
 
 tr:first-child { display: none }
 
-td {
-  padding: 3px 0 3px 6px;
-  text-align: center
-}
+td { padding: 3px 0 3px 6px }
 
 td:last-child {
   padding-right: 6px;
   width: 100%
+}
+
+form { margin-bottom: 0 }
+
+input {
+  margin: 3px 0 1px;
+  vertical-align: sub
 }
 
 .activated { color: #7f7f7f }
