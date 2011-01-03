@@ -2,7 +2,7 @@
   The script for a background page that handles request blocking and the
   visualization thereof.
 
-  Copyright 2010 Brian Kennish
+  Copyright 2010, 2011 Brian Kennish
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy of
@@ -272,7 +272,6 @@ var i;
 if (!deserialize(localStorage.initialized)) {
   for (i = 0; i < SERVICE_COUNT; i++)
       localStorage[SERVICES[i][0].toLowerCase() + BLOCKED_NAME] = true;
-  localStorage.searchDepersonalized = false;
   localStorage.blockingIndicated = true;
   localStorage.initialized = true;
 }
@@ -306,7 +305,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       var service = SERVICES[i];
       BLACKLIST[i] =
           deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME]) ?
-              [service[1], !!service[2]] : [[], false];
+              [service[1], !!service[2]] : [[]];
     }
 
     sendResponse({blacklist: BLACKLIST});

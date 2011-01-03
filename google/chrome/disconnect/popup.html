@@ -1,7 +1,7 @@
 <!--
   The markup for a popup that displays and drives the blocking of requests.
 
-  Copyright 2010 Brian Kennish
+  Copyright 2010, 2011 Brian Kennish
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy of
@@ -19,13 +19,15 @@
 -->
 <link rel="stylesheet" href="popup.css">
 <script src="popup.js"></script>
-<table>
+<table id="services">
   <tr>
     <td><img></td>
     <td> blocked</td>
   </tr>
 </table>
-<form>
-  <input type="checkbox">
-  Depersonalize searches
-</form>
+<table id="search">
+  <tr>
+    <td><input type="checkbox"></td>
+    <td>Depersonalize searches</td>
+  </tr>
+</table>
