@@ -82,20 +82,25 @@ function mapCookies(url, service) {
 }
 
 /* Erases a batch of cookies. */
-function deleteCookies(url, domain, path, storeId) {
-  COOKIES.getAll({url: url, storeId: storeId}, function(cookies) {
+function deleteCookies(url, domain, path, storeId, name) {
+  const DETAILS = {url: url, storeId: storeId};
+  if (name) DETAILS.name = name;
+
+  COOKIES.getAll(DETAILS, function(cookies) {
     const COOKIE_COUNT = cookies.length;
 
     for (var i = 0; i < COOKIE_COUNT; i++) {
       var cookie = cookies[i];
       if (cookie.domain == domain && cookie.path == path)
-          COOKIES.remove({url: url, name: cookie.name, storeId: storeId});
+          COOKIES.remove(
+            {url: url, name: name || cookie.name, storeId: storeId}
+          );
     }
   });
 }
 
 /* Rewrites a batch of specific cookies with a generic domain and path. */
-function reduceCookies(url, service) {
+function reduceCookies(url, service, name) {
   COOKIES.getAllCookieStores(function(cookieStores) {
     const STORE_COUNT = cookieStores.length;
     const SUBDOMAINS = service[2];
@@ -112,7 +117,7 @@ function reduceCookies(url, service) {
         var mappedUrl =
             url.replace('www', subdomain).replace('search', subdomain);
 
-        if (!j) {
+        if (!name && !j) {
           COOKIES.getAll({url: mappedUrl, storeId: storeId}, function(cookies) {
             const COOKIE_COUNT = cookies.length;
 
@@ -130,12 +135,12 @@ function reduceCookies(url, service) {
           });
         }
 
-        deleteCookies(mappedUrl, '.' + subdomain + DOMAIN, '/', storeId);
+        deleteCookies(mappedUrl, '.' + subdomain + DOMAIN, '/', storeId, name);
       }
 
       for (j = 0; j < PATH_COUNT; j++) {
         var path = PATHS[j];
-        deleteCookies(url + path, DOMAIN, '/' + path, storeId);
+        deleteCookies(url + path, DOMAIN, '/' + path, storeId, name);
       }
     }
   });
@@ -324,6 +329,7 @@ COOKIES.onChanged.addListener(function(changeInfo) {
     const COOKIE = changeInfo.cookie;
     const DOMAIN = COOKIE.domain;
     const PATH = COOKIE.path;
+    const EXPIRATION = COOKIE.expirationDate;
 
     for (var i = 0; i < SERVICE_COUNT; i++) {
       var service = SERVICES[i];
@@ -335,16 +341,19 @@ COOKIES.onChanged.addListener(function(changeInfo) {
             deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME])
                 && DOMAIN == domain && PATH == '/'
       ) {
-        mapCookie(COOKIE, COOKIE.storeId, url, domain, service[2], service[3]);
-
-        if (TIMESTAMP() >= START_TIME + 2000) {
-          setTimeout(function(serviceIndex) {
-            TABS.getSelected(null, function(tab) {
-              incrementCounter(tab.id, serviceIndex);
-            }); // The cookie might not be getting set from the selected tab.
-          }.bind(null, i), 2000);
-              // This call would otherwise race that of the tab listener.
-        }
+        // The cookie API doesn't properly expire cookies.
+        if (!EXPIRATION || EXPIRATION > TIMESTAMP() / 1000)
+            mapCookie(
+              COOKIE, COOKIE.storeId, url, domain, service[2], service[3]
+            );
+        else reduceCookies(url, service, COOKIE.name);
+        if (START_TIME <= TIMESTAMP() - 3000)
+            setTimeout(function(serviceIndex) {
+              TABS.getSelected(null, function(tab) {
+                incrementCounter(tab.id, serviceIndex);
+              }); // The cookie might not be getting set from the selected tab.
+            }.bind(null, i), 2000);
+                // This call would otherwise race that of the tab listener.
       }
     }
   }
