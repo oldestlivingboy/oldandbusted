@@ -17,6 +17,10 @@
 
   Brian Kennish <byoogle@gmail.com>
 */
+body, #services td { text-align: center }
+
+body, #search { font-size: x-small }
+
 body {
   margin: 0;
   width: 140px;
@@ -30,6 +34,8 @@ table {
 }
 
 input { margin-left: 0 }
+
+:link, :visited { color: #003ea8 }
 
 .activated { color: #7f7f7f }
 
@@ -47,14 +53,9 @@ input { margin-left: 0 }
 
 #services tr:first-child { display: none }
 
-#services td {
-  padding: 3px 0 3px 6px;
-  text-align: center
-}
+#services td { padding: 3px 0 3px 6px }
 
 #services td:last-child {
   padding-right: 6px;
   width: 100%
 }
-
-#search { font-size: x-small }
