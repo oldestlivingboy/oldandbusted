@@ -1,7 +1,7 @@
 /*
-  A content script that blocks requests to blacklisted domains.
+  A content script that filters on requests to blacklisted domains.
 
-  Copyright 2010 Brian Kennish
+  Copyright 2010, 2011 Brian Kennish
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy of
@@ -20,7 +20,7 @@
 
 /* Picks out which of a bucket of domains is part of a URL, regex free. */
 function index(url, services) {
-  const SERVICE_COUNT = services.length;
+  const SERVICE_COUNT = services.length - 1;
 
   services:
   for (var i = 0; i < SERVICE_COUNT; i++) {
@@ -28,7 +28,7 @@ function index(url, services) {
     var domainCount = domains.length;
     for (var j = 0; j < domainCount; j++)
         if (url.toLowerCase().indexOf(domains[j], 7) >= 7) break services;
-            // An OK URL has seven-plus characters ("http://"), then the domain.
+            // A good URL has seven-plus characters ("http://") then the domain.
   }
 
   return i < SERVICE_COUNT ? i : -1;
@@ -43,16 +43,17 @@ EXTENSION.sendRequest({initialized: true}, function(response) {
   var serviceIndex;
   if ((serviceIndex = index(location.href, BLACKLIST)) >= 0)
       BLACKLIST.splice(serviceIndex, 1);
-  const SERVICE_COUNT = BLACKLIST.length;
+  const SERVICE_COUNT = BLACKLIST.length - 1;
+  const DEPERSONALIZED = BLACKLIST[SERVICE_COUNT];
 
   for (var i = 0; i < SERVICE_COUNT; i++) {
     var service = BLACKLIST[i];
-    if (service[1]) service[0].splice(0, 1);
+    if (DEPERSONALIZED && service[1] && service[2]) service[0].splice(0, 1);
   }
 
   document.addEventListener('beforeload', function(event) {
     if ((serviceIndex = index(event.url, BLACKLIST)) >= 0) {
-      event.preventDefault();
+      if (BLACKLIST[serviceIndex][2]) event.preventDefault();
       EXTENSION.sendRequest({serviceIndex: serviceIndex});
     }
   }, true);

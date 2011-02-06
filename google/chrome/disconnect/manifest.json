@@ -1,6 +1,6 @@
 {
   "name": "Disconnect",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description":
       "Stop major third parties and search engines from tracking the webpages you go to and searches you do.",
   "icons": {"48": "48.png", "128": "128.png"},
@@ -19,7 +19,7 @@
   "background_page": "background.html",
   "browser_action": {
     "default_icon": "activated.png",
-    "default_title": "View and manage blocked requests",
+    "default_title": "View and manage requests",
     "default_popup": "popup.html"
   },
   "content_scripts": [{

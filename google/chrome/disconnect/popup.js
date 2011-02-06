@@ -1,7 +1,7 @@
 /*
   The script for a popup that displays and drives the blocking of requests.
 
-  Copyright 2010 Brian Kennish
+  Copyright 2010, 2011 Brian Kennish
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy of
@@ -18,37 +18,35 @@
   Brian Kennish <byoogle@gmail.com>
 */
 
-/* Outputs third-party details as per the blocking state. */
+/* Outputs third-party or search details according to the blocking state. */
 function renderService(
-  name, lowercaseName, blocked, blockedCount, control, badge, text
+  name, lowercaseName, blocked, requestCount, control, badge, text
 ) {
   if (blocked) {
-    if (blockedCount) {
-      badge.src = lowercaseName + '-blocked.png';
-      text.removeAttribute('class');
-    } else {
-      badge.src = lowercaseName + '-activated.png';
-      text.className = 'activated';
-    }
-
     control.title = 'Unblock ' + name;
+    badge.src =
+        lowercaseName + (requestCount ? '-blocked.png' : '-activated.png');
+    text.removeAttribute('class');
   } else {
+    control.title = 'Block ' + name;
     badge.src = lowercaseName + '-deactivated.png';
     text.className = 'deactivated';
-    control.title = 'Block ' + name;
   }
 }
 
 /* The background window. */
 const BACKGROUND = chrome.extension.getBackgroundPage();
 
+/* The initialization function for arrays. */
+const INITIALIZE_ARRAY = BACKGROUND.initializeArray;
+
 /* The deserialization function. */
 const DESERIALIZE = BACKGROUND.deserialize;
 
-/* The third parties. */
+/* The third parties and search engines. */
 const SERVICES = BACKGROUND.SERVICES;
 
-/* The number of third parties. */
+/* The number of third parties and search engines. */
 const SERVICE_COUNT = BACKGROUND.SERVICE_COUNT;
 
 /* The suffix of the blocking key. */
@@ -57,10 +55,18 @@ const BLOCKED_NAME = BACKGROUND.BLOCKED_NAME;
 /* Paints the UI. */
 onload = function() {
   chrome.tabs.getSelected(null, function(tab) {
-    const TAB_BLOCKED_COUNTS = BACKGROUND.BLOCKED_COUNTS[tab.id];
-    const SERVICE_BLOCKED_COUNTS =
-        TAB_BLOCKED_COUNTS ? TAB_BLOCKED_COUNTS[1] :
-            BACKGROUND.initializeArray(SERVICE_COUNT, 0);
+    const TAB_REQUEST_COUNTS = BACKGROUND.REQUEST_COUNTS[tab.id];
+    var serviceRequestCounts;
+    var servicesBlocked;
+
+    if (TAB_REQUEST_COUNTS) {
+      serviceRequestCounts = TAB_REQUEST_COUNTS[2];
+      servicesBlocked = TAB_REQUEST_COUNTS[3];
+    } else {
+      serviceRequestCounts = INITIALIZE_ARRAY(SERVICE_COUNT, 0);
+      servicesBlocked = INITIALIZE_ARRAY(SERVICE_COUNT, true);
+    }
+
     const SURFACE = document.getElementsByTagName('tbody')[0];
 
     for (var i = 0; i < SERVICE_COUNT; i++) {
@@ -68,7 +74,7 @@ onload = function() {
       var name = service[0];
       var lowercaseName = name.toLowerCase();
       var blockedName = lowercaseName + BLOCKED_NAME;
-      var blockedCount = SERVICE_BLOCKED_COUNTS[i];
+      var requestCount = serviceRequestCounts[i];
       var control =
           SURFACE.appendChild(
             SURFACE.getElementsByTagName('tr')[0].cloneNode(true)
@@ -79,13 +85,14 @@ onload = function() {
         name,
         lowercaseName,
         DESERIALIZE(localStorage[blockedName]),
-        blockedCount,
+        requestCount,
         control,
         badge,
         text
       );
       badge.alt = name;
-      text.textContent = blockedCount + text.textContent;
+      text.textContent =
+          requestCount + (servicesBlocked[i] ? ' blocked' : ' unblocked');
 
       control.onmouseover = function() { this.className = 'mouseover'; };
 
@@ -96,7 +103,7 @@ onload = function() {
         name,
         lowercaseName,
         blockedName,
-        blockedCount,
+        requestCount,
         control,
         badge,
         text
@@ -111,7 +118,7 @@ onload = function() {
         }
 
         renderService(
-          name, lowercaseName, BLOCKED, blockedCount, control, badge, text
+          name, lowercaseName, BLOCKED, requestCount, control, badge, text
         );
       }.bind(
         null,
@@ -119,7 +126,7 @@ onload = function() {
         name,
         lowercaseName,
         blockedName,
-        blockedCount,
+        requestCount,
         control,
         badge,
         text
