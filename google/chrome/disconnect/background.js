@@ -151,7 +151,7 @@ function incrementCounter(tabId, serviceIndex, cookie) {
   const TAB_REQUEST_COUNTS = REQUEST_COUNTS[tabId];
   const TAB_REQUEST_COUNT = ++TAB_REQUEST_COUNTS[0];
   const TAB_BLACKLIST = BLACKLIST[tabId];
-  const UNBLOCKED = !TAB_BLACKLIST[serviceIndex][2];
+  const UNBLOCKED = !TAB_BLACKLIST[serviceIndex][3];
   const INDICATED = deserialize(localStorage.requestsIndicated);
 
   if (
@@ -177,6 +177,12 @@ function incrementCounter(tabId, serviceIndex, cookie) {
 
 /* The timestamping method. */
 const TIMESTAMP = Date.now;
+
+/* The build number of the current install. */
+const CURRENT_BUILD = 15;
+
+/* The build number of the previous install. */
+const PREVIOUS_BUILD = deserialize(localStorage.build);
 
 /*
   The third parties and search engines, titlecased, and domain, subdomain, and
@@ -274,7 +280,7 @@ const SERVICE_COUNT = SERVICES.length;
 const BLOCKED_NAME = 'Blocked';
 
 /*
-  The blocked domains and search and blocking state, by service, and
+  The blocked names and domains and search and blocking state, by service, and
   depersonalization state per tab.
 */
 const BLACKLIST = {};
@@ -312,6 +318,11 @@ if (deserialize(localStorage.blockingIndicated)) {
   localStorage.requestsIndicated = true;
 }
 
+if (!PREVIOUS_BUILD || PREVIOUS_BUILD < CURRENT_BUILD) {
+  localStorage.boxDecoration = 0;
+  localStorage.build = CURRENT_BUILD;
+}
+
 for (i = 0; i < SERVICE_COUNT; i++) {
   var service = SERVICES[i];
   var url = service[4];
@@ -341,23 +352,26 @@ TABS.onUpdated.addListener(function(tabId, changeInfo) {
 */
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
   const TAB_ID = sender.tab.id;
+  var blacklist = BLACKLIST[TAB_ID];
 
   if (request.initialized) {
-    var blacklist = BLACKLIST[TAB_ID];
-
     if (!blacklist) {
       blacklist = BLACKLIST[TAB_ID] = [];
 
       for (var i = 0; i < SERVICE_COUNT; i++) {
         var service = SERVICES[i];
         blacklist[i] = [
+          service[0],
           service[1],
           !!service[2],
           deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME])
         ];
       }
 
-      blacklist[SERVICE_COUNT] = deserialize(localStorage.searchDepersonalized);
+      blacklist.push(
+        deserialize(localStorage.searchDepersonalized),
+        deserialize(localStorage.boxDecoration)
+      );
       REQUEST_COUNTS[TAB_ID] = [
         0,
         true,
@@ -368,7 +382,15 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 
     sendResponse({blacklist: blacklist});
   } else {
-    incrementCounter(TAB_ID, request.serviceIndex);
+    const SERVICE_INDEX = request.serviceIndex;
+
+    if (!request.unblocked) incrementCounter(TAB_ID, SERVICE_INDEX);
+    else {
+      delete
+          localStorage[SERVICES[SERVICE_INDEX][0].toLowerCase() + BLOCKED_NAME];
+      delete blacklist[SERVICE_INDEX][3];
+    }
+
     sendResponse({});
   }
 });
@@ -393,15 +415,11 @@ COOKIES.onChanged.addListener(function(changeInfo) {
         if (
           DEPERSONALIZED &&
               deserialize(localStorage[service[0].toLowerCase() + BLOCKED_NAME])
-        ) {
-          // The cookie API doesn't properly expire cookies.
-          if (!EXPIRATION || EXPIRATION > TIMESTAMP() / 1000)
-              mapCookie(
-                COOKIE, COOKIE.storeId, url, DOMAIN, service[2], service[3]
-              );
-          else reduceCookies(url, service, COOKIE.name);
-        }
-
+        ) !EXPIRATION || EXPIRATION > TIMESTAMP() / 1000 ?
+            mapCookie(
+              COOKIE, COOKIE.storeId, url, DOMAIN, service[2], service[3]
+            ) : reduceCookies(url, service, COOKIE.name);
+                // The cookie API doesn't properly expire cookies.
         if (START_TIME <= TIMESTAMP() - 3000)
             setTimeout(function(serviceIndex) {
               TABS.getSelected(null, function(tab) {
