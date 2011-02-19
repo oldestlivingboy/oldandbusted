@@ -179,7 +179,7 @@ function incrementCounter(tabId, serviceIndex, cookie) {
 const TIMESTAMP = Date.now;
 
 /* The build number of the current install. */
-const CURRENT_BUILD = 15;
+const CURRENT_BUILD = 16;
 
 /* The build number of the previous install. */
 const PREVIOUS_BUILD = deserialize(localStorage.build);
